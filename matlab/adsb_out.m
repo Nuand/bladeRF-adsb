@@ -1,6 +1,6 @@
 %% TX Side
 % Change
-adsb.type = 'ext' ;
+adsb.type = 'ext' ; % 'ext' and 'short' are the only valid values
 adsb.df = 17 ;
 adsb.ca = 5 ;
 adsb.address = '75804b';
@@ -327,7 +327,11 @@ for dbfs=DBFS_START:DBFS_END
     end
 
     % Total number of messages received out of the 1000 sent
-    performance(pidx) = sum(cat(1, rx.msg(1:end).passlong))
+    if strcmp(adsb.type,'ext') == true
+        performance(pidx) = sum(cat(1, rx.msg(1:end).passlong))
+    else
+        performance(pidx) = sum(cat(1, rx.msg(1:end).passshort))
+    end
     pidx = pidx + 1 ;
 end
 
