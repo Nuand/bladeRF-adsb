@@ -90,7 +90,7 @@ len = length(adsb.tx8spsfilt) ;
 %% Outside loop simulation
 % NOTE: These values will need to be characterized for this model to be
 % even close to accurate in prediction
-DBFS_START = -25 ;
+DBFS_START = -22 ;
 DBFS_END = -14 ;
 
 NOISE_DBFS = -30 ;
@@ -98,6 +98,8 @@ THRESHOLD = 100 ; % ADC counts to consider a valid signal
 
 performance = zeros(1, length(DBFS_START:DBFS_END)) ;
 pidx = 1 ;
+rx_vectors = zeros(length(DBFS_START:DBFS_END), length(adsb.tx8norm)) ;
+run = 1 ;
 for dbfs=DBFS_START:DBFS_END
     %% ADC Noise
     % For a -85dBm signal coming into a bladeRF with 14MHz bandwidth, connected
@@ -145,6 +147,8 @@ for dbfs=DBFS_START:DBFS_END
 
     % Update while the simulation is running
     adc
+    %rx_vectors(run,:) = adc.sig ;
+    %run = run + 1 ;
     
     %% Receiver
 
@@ -153,6 +157,10 @@ for dbfs=DBFS_START:DBFS_END
 
     % Filter
     rx.bbfilt = conv(rx.bb, h) ;
+    
+    % Save off baseband filtered samples for later processing
+    rx_vectors(run,:) = rx.bbfilt(1:length(adc.sig)) ;
+    run = run + 1 ;
 
     % Absolute value
     rx.absbb = abs(rx.bbfilt) ;
