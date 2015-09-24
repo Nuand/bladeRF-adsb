@@ -90,11 +90,11 @@ len = length(adsb.tx8spsfilt) ;
 %% Outside loop simulation
 % NOTE: These values will need to be characterized for this model to be
 % even close to accurate in prediction
-DBFS_START = -22 ;
-DBFS_END = -14 ;
+DBFS_START = -29 ;
+DBFS_END = -22 ;
 
 NOISE_DBFS = -30 ;
-THRESHOLD = 100 ; % ADC counts to consider a valid signal
+THRESHOLD = 10 ; % ADC counts to consider a valid signal
 
 performance = zeros(1, length(DBFS_START:DBFS_END)) ;
 pidx = 1 ;
@@ -313,11 +313,11 @@ for dbfs=DBFS_START:DBFS_END
 
             % Check short CRC
             result = step(adsb.crc24, logical(rx.msg(count).short)' )';
-            rx.msg(count).passshort = (sum(result(end-23:end)) == 0) ;
+            rx.msg(count).passshort = (sum(result(end-23:end)) == 0) && (sum(xor(adsb.payload(1:56), rx.msg(count).short) == 0));
 
             % Check extended CRC
             result = step(adsb.crc24, logical(rx.msg(count).long)' )' ;
-            rx.msg(count).passlong = (sum(result(end-23:end)) == 0) ;
+            rx.msg(count).passlong = (sum(result(end-23:end)) == 0) && (sum(xor(adsb.payload(1:end), rx.msg(count).long) == 0));
 
             % If it doesn't pass CRC, then brute-force the 5 weakest bits
             if( rx.msg(count).passlong == 0 && rx.msg(count).passshort == 0 )
@@ -335,10 +335,12 @@ for dbfs=DBFS_START:DBFS_END
     end
 
     % Total number of messages received out of the 1000 sent
-    if strcmp(adsb.type,'ext') == true
-        performance(pidx) = sum(cat(1, rx.msg(1:end).passlong))
-    else
-        performance(pidx) = sum(cat(1, rx.msg(1:end).passshort))
+    if( isfield(rx,'msg') )
+        if strcmp(adsb.type,'ext') == true
+            performance(pidx) = sum(cat(1, rx.msg(1:end).passlong))
+        else
+            performance(pidx) = sum(cat(1, rx.msg(1:end).passshort))
+        end
     end
     pidx = pidx + 1 ;
 end
