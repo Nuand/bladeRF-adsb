@@ -27,8 +27,8 @@ FILE *csv_save= NULL;
 
 int main(int argc, char *argv[])
 {
-    char *in_filename;
-    char *out_filename;
+    char *in_filename = NULL;
+    char *out_filename = NULL;
     int c;
     uint8_t enable_mix = 0;
     uint8_t enable_filter = 0;
@@ -70,6 +70,14 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    FILE *message_file = NULL;
+    if(out_filename){
+        message_file = fopen(out_filename,"w");
+        if(message_file == NULL){
+            printf("unable to open specified message file %s\n", out_filename);
+        }
+    }
+
     //configure adsb rx
     c16_t rx_sample;
     int rx_real;
@@ -89,8 +97,7 @@ int main(int argc, char *argv[])
     uint32_t previous_sample = 0;
     uint32_t previous_error_sample = 0;
     uint32_t false_msg_count = 0;
-
-            uint32_t dup_error = 0;
+    uint32_t dup_error = 0;
 
 
     if(fixed_point){
@@ -154,6 +161,15 @@ int main(int argc, char *argv[])
                     previous_sample = current_sample;
                     valid_msg_count++;
                 }
+
+
+                if(message_file){
+                    for(i = 0; i < rxmsg->msg_size; i++)
+                    {
+                        fprintf(message_file, "%x ", rxmsg->data[i]);
+                    }
+                    fprintf(message_file,"\n");
+                }
                 free(rxmsg->data);
                 free(rxmsg);
 
@@ -185,7 +201,11 @@ int main(int argc, char *argv[])
 
 
     fclose(sample_file);
-    fclose(csv_save);
-
+    if(message_file){
+        fclose(message_file);
+    }
+    if(csv_save){
+        fclose(csv_save);
+    }
     return 0;
 }

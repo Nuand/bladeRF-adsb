@@ -201,6 +201,19 @@ void init( uint8_t enable_filter, uint8_t enable_mix)
         current_state.pending_message_buffers[i] = NULL;
     }
 
+    //initialize the bb filt
+    current_state.rx_filt.num_taps = sizeof(bb_h_filt)/sizeof(double);
+    current_state.rx_filt.q_scale = 12;
+    current_state.rx_filt.taps = malloc(current_state.rx_filt.num_taps *sizeof(c16_t));
+    current_state.rx_filt.delay_line = malloc(current_state.rx_filt.num_taps *sizeof(c16_t));
+
+    for(i = 0; i < current_state.rx_filt.num_taps; i++){
+      current_state.rx_filt.taps[i].real  = (int16_t)(bb_h_filt[i] * (1 << current_state.rx_filt.q_scale));
+      current_state.rx_filt.taps[i].imag  = (int16_t)(bb_h_filt[i] * (1 << current_state.rx_filt.q_scale));
+    }
+    memset(current_state.rx_filt.delay_line,0, sizeof(c16_t) * current_state.rx_filt.num_taps);
+
+
     init_crc_lut();
 }
 
@@ -208,7 +221,7 @@ static inline void flipbit(uint8_t *buffer, uint32_t bit_loc ){
   buffer[bit_loc >> 4] ^= (1 << (bit_loc & 0x7));
 }
 
-uint32_t brute_force_extended(int32_t *bsd, uint8_t *msg_bits){
+uint32_t brute_force(int32_t *bsd, uint8_t *msg_bits,uint32_t msg_length){
 uint32_t i,j,k,l;
 
   uint32_t rx_crc_e = 0;
@@ -224,7 +237,7 @@ uint32_t i,j,k,l;
   weak_val[0] = cur_min;
   weak_loc[0] = 0;
 
-  for(i = 1; i < EXTENDED_MESSAGE_LENGTH; i++)
+  for(i = 1; i < msg_length; i++)
   {
     //if it's greater than the current min threshold, check to see if we've found
     //5 min yet, if we haven't add it to the list and update the min, if we've found
@@ -277,18 +290,18 @@ uint32_t i,j,k,l;
 
         for(l = 0; l < 2; l++){
           flipbit(msg_bits,weak_loc[4]);
-          uint32_t extended_crc = check_crc(msg_bits, EXTENDED_MESSAGE_LENGTH/8 -3);
-          uint32_t rx_crc_e = (msg_bits[11] << 16) | (msg_bits[12] << 8) | msg_bits[13];
+          uint32_t calc_crc = check_crc(msg_bits, msg_length/8 -3);
+          uint32_t rx_crc = (msg_bits[msg_length/8 -3] << 16) | (msg_bits[msg_length/8-2] << 8) | msg_bits[msg_length/8-1];
 
-          if( !(rx_crc_e ^ extended_crc)){
+          if( !(rx_crc ^ calc_crc) && (rx_crc != 0)){
             return 1;
           }
 
           flipbit(msg_bits,weak_loc[4]);
-          extended_crc = check_crc(msg_bits, EXTENDED_MESSAGE_LENGTH/8 -3);
-          rx_crc_e = (msg_bits[11] << 16) | (msg_bits[12] << 8) | msg_bits[13];
+          calc_crc = check_crc(msg_bits, msg_length/8 -3);
+          rx_crc = (msg_bits[msg_length/8 -3] << 16) | (msg_bits[msg_length/8 -2] << 8) | msg_bits[msg_length/8-1];
 
-          if( !(rx_crc_e ^ extended_crc)){
+          if( !(rx_crc ^ calc_crc)  && (rx_crc != 0) ){
             return 1;
           }
 
@@ -366,7 +379,7 @@ message_t* rx(c16_t *in_sample)
     //ifthe 5 samples past the center point exceeds
     //the threshold then find if the current sample is larger
     //the previous and subsequent
-    if(count >= 4)
+    if(count >= 5)
     {
         uint32_t prior_sample = current_state.rcd_buffer[EDGE_DETECTION_INDEX-1];
         uint32_t prior_ratio = center_sample/(prior_sample+1);
@@ -374,11 +387,15 @@ message_t* rx(c16_t *in_sample)
         uint32_t subsequent_ratio = center_sample/(subsequent_sample+1);
 
 
-        if( ( prior_ratio >+ 1 ) &&
+/*        if( ( prior_ratio >= 1 ) &&
             ( subsequent_ratio < 1)) {
             current_state.leading_edges[EDGE_DETECTION_INDEX] = 1;
-        }
+        }*/
 
+            if( (center_sample >= (prior_sample) ) && (center_sample < (subsequent_sample+1) )){
+            current_state.leading_edges[EDGE_DETECTION_INDEX] = 1;
+
+            }
 /*        printf(" %" PRIu64" edge %d count detected %d %d %d, ratio %d/%d\n",
             current_state.samples_consumed,
             current_state.leading_edges[EDGE_DETECTION_INDEX],
@@ -677,6 +694,19 @@ message_t* rx(c16_t *in_sample)
         completed_message->data = msg;
         completed_message->sd_remaining = SPS * EXTENDED_MESSAGE_LENGTH;
         completed_message->sd_current = completed_message->sd_buffer;
+        completed_message->msg_size = 14;
+
+        current_state.active_message_count += 1;
+      }
+      else if( !(short_crc ^ rx_crc_s) && (rx_crc_s != 0) ){
+                current_state.messages_rxd++;
+
+
+        completed_message = (message_t *)malloc(sizeof(message_t));
+        completed_message->data = msg;
+        completed_message->sd_remaining = SPS * SHORT_MESSAGE_LENGTH;
+        completed_message->sd_current = completed_message->sd_buffer;
+        completed_message->msg_size = 7;
 
         current_state.active_message_count += 1;
       }
@@ -689,16 +719,26 @@ message_t* rx(c16_t *in_sample)
                 }
         printf("CRC FAILED 0x%x 0x%x\n",rx_crc_e, extended_crc);
         }*/
-        if(brute_force_extended(bsd,msg)){
+        if(brute_force(bsd,msg,EXTENDED_MESSAGE_LENGTH)){
           completed_message = (message_t *)malloc(sizeof(message_t));
 
           completed_message->data = msg;
           completed_message->sd_remaining = SPS * EXTENDED_MESSAGE_LENGTH;
           completed_message->sd_current = completed_message->sd_buffer;
-
+          completed_message->msg_size = 14;
           current_state.active_message_count += 1;
           current_state.brute_forced_count += 1;
 
+        }else if (brute_force(bsd,msg,SHORT_MESSAGE_LENGTH)){
+          current_state.messages_rxd++;
+
+          completed_message = (message_t *)malloc(sizeof(message_t));
+          completed_message->data = msg;
+          completed_message->sd_remaining = SPS * SHORT_MESSAGE_LENGTH;
+          completed_message->sd_current = completed_message->sd_buffer;
+          completed_message->msg_size = 7;
+
+          current_state.active_message_count += 1;
         }
       }
 

@@ -34,6 +34,7 @@ typedef struct
     int16_t *sd_current;
     uint16_t msg_type;
     uint8_t *data;
+    size_t  msg_size;
 }message_t;
 
 void init(uint8_t enable_filter, uint8_t enable_mix);
