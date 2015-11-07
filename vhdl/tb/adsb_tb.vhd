@@ -5,6 +5,9 @@ library ieee ;
 library std ;
     use std.textio.all ;
 
+library work ;
+    use work.adsb_decoder_p.all ;
+
 entity adsb_tb is
 end entity ;
 
@@ -20,78 +23,38 @@ architecture arch of adsb_tb is
     constant Thp            :   time                                := 1.0/16.0e6/2.0 * 1 sec ;
     constant FNAME          :   string                              := "input.dat" ;
 
+    constant NUM_DECODERS   :   positive                            := 8 ;
+
     signal clock            :   std_logic                           := '1' ;
     signal reset            :   std_logic                           := '1' ;
 
     signal edge_init        :   std_logic                           := '0' ;
-    signal edge_in_power    :   signed(31 downto 0) ;
+    signal edge_in_power    :   signed(INPUT_POWER_WIDTH-1 downto 0) ;
     signal edge_in_valid    :   std_logic ;
 
-    signal edge_out_power   :   signed(31 downto 0) ;
-    signal edge_out_level   :   std_logic ;
-    signal edge_out_valid   :   std_logic ;
-
-    signal det_power        :   signed(31 downto 0) ;
-    signal det_valid        :   std_logic ;
-
-    signal det_som          :   std_logic_vector(0e6 downto 0) ;
-    signal det_eom          :   std_logic_vector(0 downto 0) ;
-    signal det_rpl          :   signed(31 downto 0) ;
-
-    signal dec_byte         :   unsigned(7 downto 0) ;
-    signal dec_ready        :   std_logic ;
+    signal msgs             :   messages_t(NUM_DECODERS-1 downto 0) ;
+    signal msgs_valid       :   std_logic_vector(NUM_DECODERS-1 downto 0) ;
 
 begin
 
     clock <= not clock after Thp ;
 
-    U_edge_detector : entity work.edge_detector
-      port map (
-        clock       =>  clock,
-        reset       =>  reset,
-
-        init        =>  edge_init,
-
-        power_in    =>  edge_in_power,
-        in_valid    =>  edge_in_valid,
-
-        power_out   =>  edge_out_power,
-        edge_out    =>  edge_out_level,
-        out_valid   =>  edge_out_valid
-      ) ;
-
-    U_preamble_detector : entity work.preamble_detector
+    U_adsb_top : entity work.adsb_decoder
       generic map (
-        NUM_MESSAGE_DECODER =>  1
-      ) port map (
-        clock       =>  clock,
-        reset       =>  reset,
+        NUM_DECODERS    =>  NUM_DECODERS
+      ) port map(
+        clock           => clock,
+        reset           => reset,
 
-        power_in    =>  edge_out_power,
-        edge_in     =>  edge_out_level,
-        in_valid    =>  edge_out_valid,
+        init            => edge_init,
 
-        power_out   =>  det_power,
-        out_valid   =>  det_valid,
-        som         =>  det_som,
-        eom         =>  det_eom,
-        rpl         =>  det_rpl
-      ) ;
+        in_power        => edge_in_power,
+        in_valid        => edge_in_valid,
 
-    U_message_decoder : entity work.message_decoder
-    port map(
-        clock       => clock,
-        reset       => reset,
+        debug_rpl       => open,
 
-        power_in    => det_power,
-        rpl_in      => det_rpl,
-        som         => det_som(0),
-        eom         => det_eom(0),
-        in_valid    => det_valid,
-
-        message_byte    =>  dec_byte,
-        message_rdy     =>  dec_ready,
-        message_read => '1'
+        out_messages    => msgs,
+        out_valid       => msgs_valid
     );
 
     tb : process
@@ -100,6 +63,7 @@ begin
         file fin        :   binfile ;
         variable c      :   character ;
         variable i, q   :   integer ;
+        variable sample_count : integer := 0 ;
     begin
         nop( clock, 100 ) ;
 
@@ -143,6 +107,7 @@ begin
             end if ;
 
             -- Feed it into the front end
+            sample_count := sample_count + 1 ;
             edge_in_power <= to_signed( i*i+q*q, edge_in_power'length) ;
             edge_in_valid <= '1' ;
             nop( clock, 1 ) ;

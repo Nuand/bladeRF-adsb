@@ -20,6 +20,8 @@ end entity ;
 
 architecture arch of adsb_crc is
 
+    constant GOOD : std_logic_vector(111 downto 0) := 112x"d001f7a69b7ecff20f584b80758d" ;
+
     constant CRC_POLY : std_logic_vector(24 downto 0) := 25x"1fff409" ;
 
     type fsm_t is (IDLE, CALCULATING, DONE) ;
@@ -105,6 +107,23 @@ begin
                 future.fsm <= IDLE ;
 
         end case ;
+    end process ;
+
+    compare : process(clock, reset)
+        variable count : natural := 0 ;
+        variable diff : std_logic_vector(111 downto 0) ;
+    begin
+        if( rising_edge(clock) ) then
+            if( current.valid = '1' and current.good = '0' ) then
+                diff :=  data xor GOOD ;
+                count := 0 ;
+                for i in diff'range loop
+                    if( diff(i) = '1' ) then
+                        count := count + 1 ;
+                    end if ;
+                end loop ;
+            end if ;
+        end if ;
     end process ;
 
     -- Registered Outputs

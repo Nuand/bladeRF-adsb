@@ -2,16 +2,18 @@ library ieee;
     use ieee.numeric_std.all;
     use ieee.std_logic_1164.all;
 
+library work ;
+    use work.adsb_decoder_p.all ;
 
 entity edge_detector is
     port (
         clock : in std_logic;
         reset : in std_logic;
 
-        power_in : in signed(31 downto 0);
+        power_in : in signed(INPUT_POWER_WIDTH-1 downto 0);
         in_valid : in std_logic;
 
-        power_out : out signed(31 downto 0);
+        power_out : out signed(INPUT_POWER_WIDTH-1 downto 0);
         edge_out : out std_logic;
         out_valid : out std_logic;
 
@@ -24,9 +26,9 @@ architecture arch of edge_detector is
     constant SPS : integer := 8;
     constant EDGE_BUFFER_LENGTH : integer := SPS + 1;
     constant CENTER_TAP : integer := EDGE_BUFFER_LENGTH-5;
-    constant POWER_THRESHOLD : signed := to_signed(integer(100),32);
+    constant POWER_THRESHOLD : signed := to_signed(integer(100),INPUT_POWER_WIDTH);
 
-    type power_array is array(natural range <>) of signed(31 downto 0);
+    type power_array is array(natural range <>) of signed(INPUT_POWER_WIDTH-1 downto 0);
     signal power_grid : power_array (0 to EDGE_BUFFER_LENGTH-1);
 
     signal power_exceeds_thresh : std_logic_vector(0 to EDGE_BUFFER_LENGTH-1);
@@ -40,9 +42,9 @@ begin
     shift_input : process(clock,reset)
     
         variable tmp_power : integer;
-        variable p_center : signed(31 downto 0);
-        variable p_center_m1 : signed(31 downto 0);
-        variable p_center_p1 : signed(31 downto 0);
+        variable p_center : signed(INPUT_POWER_WIDTH-1 downto 0);
+        variable p_center_m1 : signed(INPUT_POWER_WIDTH-1 downto 0);
+        variable p_center_p1 : signed(INPUT_POWER_WIDTH-1 downto 0);
         variable calculate_edge : std_logic;
         variable exceeds_count : integer range 0 to 5;
         variable edge_detected : std_logic;

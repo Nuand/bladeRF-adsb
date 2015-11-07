@@ -2,6 +2,8 @@ library ieee;
     use ieee.numeric_std.all;
     use ieee.std_logic_1164.all;
 
+library work ;
+    use work.adsb_decoder_p.all ;
 
 entity bsd_calculator is
     port(
@@ -9,10 +11,10 @@ entity bsd_calculator is
         reset : in std_logic;
 
 
-        rpl_in : in signed(31 downto 0);
+        rpl_in : in signed(INPUT_POWER_WIDTH-1 downto 0);
         rpl_valid : in std_logic;
 
-        power_in : in signed(31 downto 0);
+        power_in : in signed(INPUT_POWER_WIDTH-1 downto 0);
         power_in_valid : in std_logic;
 
         bsd : out signed(7 downto 0);
@@ -27,18 +29,18 @@ architecture arch of bsd_calculator is
     constant SPS : integer := 8;
 
     type weight_array_t is array(natural range <>) of integer range 0 to 3;
-    constant weights  : weight_array_t(0 to SPS-1) := (1,1,2,2,2,2,1,1);
+    constant weights  : weight_array_t(0 to SPS-1) := (0,0,1,1,1,1,0,0) ; -- (1,1,2,2,2,2,1,1);
 
     signal sample_count : integer range 0 to 2*SPS;
 
-    signal score0 : signed(31 downto 0);
-    signal score1 : signed(31 downto 0);
-    signal score0_reg : signed(31 downto 0);
-    signal score1_reg : signed(31 downto 0);
+    signal score0 : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal score1 : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal score0_reg : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal score1_reg : signed(INPUT_POWER_WIDTH-1 downto 0);
 
-    signal rpl_low : signed(31 downto 0);
-    signal rpl_high : signed(31 downto 0);
-    signal rpl_lowlow : signed(31 downto 0);
+    signal rpl_low : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal rpl_high : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal rpl_lowlow : signed(INPUT_POWER_WIDTH-1 downto 0);
 
     type bsd_hit_t is array(natural range <>) of signed(7 downto 0);
     signal typeA : bsd_hit_t(0 to 2*SPS-1);
@@ -57,8 +59,8 @@ begin
         variable b1_index : integer range SPS to (2*SPS)-1;
         variable local_count : integer range 0 to 15;
 
-        variable tmp_score1 : signed(31 downto 0);
-        variable tmp_score0 : signed(31 downto 0);
+        variable tmp_score1 : signed(INPUT_POWER_WIDTH-1 downto 0);
+        variable tmp_score0 : signed(INPUT_POWER_WIDTH-1 downto 0);
     begin
         if(reset ='1') then
             --
@@ -149,7 +151,7 @@ begin
             if(rpl_valid = '1') then 
                 rpl_low <= rpl_in  - (shift_right(rpl_in,1) + shift_right(rpl_in,2));
                 rpl_high <= rpl_in + shift_right(rpl_in,1) + shift_right(rpl_in,2);
-                rpl_lowlow <= shift_right(rpl_in,1);
+                rpl_lowlow <= shift_right(rpl_in  - (shift_right(rpl_in,1) + shift_right(rpl_in,2)),1);
                 sample_count <= 0;
                 local_count := 0;
             end if;
