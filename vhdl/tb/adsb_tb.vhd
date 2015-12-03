@@ -35,6 +35,11 @@ architecture arch of adsb_tb is
     signal msgs             :   messages_t(NUM_DECODERS-1 downto 0) ;
     signal msgs_valid       :   std_logic_vector(NUM_DECODERS-1 downto 0) ;
 
+    signal fifo_data        :   std_logic_vector(127 downto 0) ;
+    signal fifo_valid       :   std_logic ;
+
+    signal valid_messages   :   natural                             := 0 ;
+
 begin
 
     clock <= not clock after Thp ;
@@ -56,6 +61,35 @@ begin
         out_messages    => msgs,
         out_valid       => msgs_valid
     );
+
+    U_msg_agg : entity work.message_aggregator
+      generic map (
+        MSGS_PER_TIMEOUT    =>  128,
+        PACKET_TIMEOUT      =>  32000000/10,
+        NUM_DECODERS        =>  NUM_DECODERS
+      ) port map (
+        clock               =>  clock,
+        reset               =>  reset,
+
+        in_messages         =>  msgs,
+        in_valid            =>  msgs_valid,
+
+        out_message         =>  fifo_data,
+        out_valid           =>  fifo_valid
+      ) ;
+
+    count_msgs : process(clock, reset)
+    begin
+        if( reset = '1' ) then
+            valid_messages <= 0 ;
+        elsif( rising_edge(clock) ) then
+            if( fifo_valid = '1' ) then
+                if( fifo_data(fifo_data'high) = '1' ) then
+                    valid_messages <= valid_messages + 1 ;
+                end if ;
+            end if ;
+        end if ;
+    end process ;
 
     tb : process
         variable status :   file_open_status ;
