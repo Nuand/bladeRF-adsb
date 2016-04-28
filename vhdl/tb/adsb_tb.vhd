@@ -28,6 +28,10 @@ architecture arch of adsb_tb is
     signal clock            :   std_logic                           := '1' ;
     signal reset            :   std_logic                           := '1' ;
 
+    signal in_i             :   signed(15 downto 0) ;
+    signal in_q             :   signed(15 downto 0) ;
+    signal in_valid         :   std_logic                           := '0' ;
+
     signal edge_init        :   std_logic                           := '0' ;
     signal edge_in_power    :   signed(INPUT_POWER_WIDTH-1 downto 0) ;
     signal edge_in_valid    :   std_logic ;
@@ -43,6 +47,19 @@ architecture arch of adsb_tb is
 begin
 
     clock <= not clock after Thp ;
+
+    U_adsb_fe : entity work.adsb_fe
+      port map (
+        clock           =>  clock,
+        reset           =>  reset,
+
+        in_i            =>  in_i,
+        in_q            =>  in_q,
+        in_valid        =>  in_valid,
+
+        out_power       =>  edge_in_power,
+        out_valid       =>  edge_in_valid
+      ) ;
 
     U_adsb_top : entity work.adsb_decoder
       generic map (
@@ -84,7 +101,7 @@ begin
             valid_messages <= 0 ;
         elsif( rising_edge(clock) ) then
             if( fifo_valid = '1' ) then
-                if( fifo_data(fifo_data'high) = '1' ) then
+                if( fifo_data(0) = '1' ) then
                     valid_messages <= valid_messages + 1 ;
                 end if ;
             end if ;
@@ -102,7 +119,6 @@ begin
         nop( clock, 100 ) ;
 
         reset <= '0' ;
-        edge_in_valid <= '0';
         nop( clock, 100 ) ;
 
         edge_init <= '1' ;
@@ -141,12 +157,18 @@ begin
             end if ;
 
             -- Feed it into the front end
+            in_i <= to_signed(i, in_i'length) ;
+            in_q <= to_signed(q, in_q'length) ;
+            in_valid <= '1' ;
+            nop( clock, 1 ) ;
+            in_valid <= '0' ;
+            nop( clock, 1 ) ;
             sample_count := sample_count + 1 ;
-            edge_in_power <= to_signed( i*i+q*q, edge_in_power'length) ;
-            edge_in_valid <= '1' ;
-            nop( clock, 1 ) ;
-            edge_in_valid <= '0' ;
-            nop( clock, 1 ) ;
+            --edge_in_power <= to_signed( i*i+q*q, edge_in_power'length) ;
+            --edge_in_valid <= '1' ;
+            --nop( clock, 1 ) ;
+            --edge_in_valid <= '0' ;
+            --nop( clock, 1 ) ;
         end loop ;
 
         -- Done with the file, so close it

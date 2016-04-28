@@ -20,7 +20,10 @@ end entity ;
 
 architecture arch of adsb_crc is
 
+    -- synthesis_translate off
+    -- Used for testbenching of known message
     constant GOOD : std_logic_vector(111 downto 0) := 112x"d001f7a69b7ecff20f584b80758d" ;
+    -- synthesis_translate on
 
     constant CRC_POLY : std_logic_vector(24 downto 0) := 25x"1fff409" ;
 
@@ -34,6 +37,7 @@ architecture arch of adsb_crc is
         busy    :   std_logic ;
         valid   :   std_logic ;
         good    :   std_logic ;
+        nonzero :   std_logic ;
     end record ;
 
     signal current, future : state_t ;
@@ -59,6 +63,7 @@ begin
                 future.busy <= '0' ;
                 future.valid <= '0' ;
                 future.good <= '0' ;
+                future.nonzero <= '0' ;
                 if( data_valid = '1' ) then
                     future.data <= data ;
                     future.fsm <= CALCULATING ;
@@ -76,6 +81,9 @@ begin
                 end if ;
 
             when CALCULATING =>
+                if( current.nonzero = '0' and unsigned(current.data(7 downto 0)) /= 0 ) then
+                    future.nonzero <= '1' ;
+                end if ;
                 future.data <= x"00" & current.data(current.data'high downto 8) ;
                 crc := current.crc ;
                 -- NOTE: This loop changes based on how data is fed into this
@@ -96,7 +104,7 @@ begin
             when DONE =>
                 future.fsm <= IDLE ;
                 future.valid <= '1' ;
-                if( to_integer(unsigned(current.crc)) = 0 ) then
+                if( to_integer(unsigned(current.crc)) = 0 and current.nonzero = '1' ) then
                     future.good <= '1' ;
                 else
                     future.good <= '0' ;
@@ -109,6 +117,7 @@ begin
         end case ;
     end process ;
 
+    -- synthesis_translate off
     compare : process(clock, reset)
         variable count : natural := 0 ;
         variable diff : std_logic_vector(111 downto 0) ;
@@ -125,6 +134,7 @@ begin
             end if ;
         end if ;
     end process ;
+    -- synthesis_translate on
 
     -- Registered Outputs
     busy <= current.busy ;

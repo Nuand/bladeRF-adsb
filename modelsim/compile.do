@@ -13,6 +13,9 @@ vcom -work $work -2008 ../vhdl/adsb_crc.vhd
 vcom -work $work -2008 ../vhdl/bit_flipper.vhd
 vcom -work $work -2008 ../vhdl/message_decoder.vhd
 vcom -work $work -2008 ../vhdl/message_aggregator.vhd
+vcom -work $work -2008 ../../synthesis/constellation_mapper.vhd
+vcom -work $work -2008 ../../synthesis/fir_filter.vhd
+vcom -work $work -2008 ../vhdl/adsb_fe.vhd
 
 # Top level
 vcom -work $work -2008 ../vhdl/adsb_decoder.vhd

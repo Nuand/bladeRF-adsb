@@ -2,12 +2,8 @@ library ieee;
     use ieee.numeric_std.all;
     use ieee.std_logic_1164.all;
 
-
-
 entity edge_detector_tb is
 end entity;
-
-
 
 architecture arch of edge_detector_tb is
 
@@ -23,15 +19,12 @@ architecture arch of edge_detector_tb is
 
     signal initialize_edge : std_logic;
 
-
-
     procedure nop( signal clock : in std_logic; count : in natural) is
     begin
         for i in 1 to count loop
             wait until rising_edge(clock);
         end loop;
     end procedure;
-
 
 begin
 
@@ -61,21 +54,20 @@ begin
 
     end process;
 
-
     U_edge_detector : entity work.edge_detector(arch)
       port map  (
-        clock   => clock,
-        reset   => reset,
+        clock       => clock,
+        reset       => reset,
 
-        power_in => power_in,
-        in_valid => in_valid,
+        power_in    => power_in,
+        in_valid    => in_valid,
 
-        power_out => power_out,
-        edge_out  => edge_out,
-        out_valid => out_Valid,
+        power_out   => power_out,
+        edge_out    => edge_out,
+        out_valid   => out_valid,
 
-        init     => initialize_edge
+        init        => initialize_edge
     );
 
-
 end architecture;
+

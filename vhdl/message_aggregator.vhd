@@ -63,9 +63,9 @@ begin
     end process ;
 
     round_robin : process(clock, reset)
-        variable count : natural range 0 to MSGS_PER_TIMEOUT-1 ;
-        variable downcount : natural range 0 to PACKET_TIMEOUT ;
-        variable idx : natural range 0 to NUM_DECODERS-1 ;
+        variable count : natural range 0 to MSGS_PER_TIMEOUT-1 := MSGS_PER_TIMEOUT-1 ;
+        variable downcount : natural range 0 to PACKET_TIMEOUT := PACKET_TIMEOUT ;
+        variable idx : natural range 0 to NUM_DECODERS-1 := 0 ;
         variable new_count : natural range 0 to MSGS_PER_TIMEOUT-1 ;
     begin
         if( reset = '1' ) then
@@ -94,7 +94,7 @@ begin
 
             -- Round robin on the holding inputs
             if( holding(idx).valid = '1' ) then
-                out_message <= x"8000" & holding(idx).msg ;
+                out_message <= holding(idx).msg & x"0001" ;
                 out_valid <= '1' ;
                 if( count > 0 ) then
                     new_count := count - 1 ;

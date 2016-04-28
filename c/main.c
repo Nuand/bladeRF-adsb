@@ -6,21 +6,20 @@
 #include <getopt.h>
 
 uint8_t known_msg[] = {
-
-0x8d,
-0x75,
-0x80,
-0x4b,
-0x58,
-0x0f,
-0xf2,
-0xcf,
-0x7e,
-0x9b,
-0xa6,
-0xf7,
-0x01,
-0xd0
+    0x8d,
+    0x75,
+    0x80,
+    0x4b,
+    0x58,
+    0x0f,
+    0xf2,
+    0xcf,
+    0x7e,
+    0x9b,
+    0xa6,
+    0xf7,
+    0x01,
+    0xd0
 };
 
 FILE *csv_save= NULL;
@@ -32,8 +31,6 @@ int main(int argc, char *argv[])
     int c;
     uint8_t enable_mix = 0;
     uint8_t enable_filter = 0;
-
-
 
     while((c = getopt(argc,argv, "i:o:mf")) != -1){
         switch(c)
@@ -58,7 +55,6 @@ int main(int argc, char *argv[])
         }
 
     }
-
 
     uint16_t eof = 0;
 
@@ -98,7 +94,6 @@ int main(int argc, char *argv[])
     uint32_t previous_error_sample = 0;
     uint32_t false_msg_count = 0;
     uint32_t dup_error = 0;
-
 
     if(fixed_point){
         while( !eof )
@@ -162,7 +157,6 @@ int main(int argc, char *argv[])
                     valid_msg_count++;
                 }
 
-
                 if(message_file){
                     for(i = 0; i < rxmsg->msg_size; i++)
                     {
@@ -179,7 +173,6 @@ int main(int argc, char *argv[])
             //if(current_sample > (3131 + 112*8*2))return;
             eof = (elem_read == 4) ? 0 : 1;
         }
-
 
         print_stats();
         printf("total %d valid %d error %d dup %d false %d\n",valid_msg_count,valid_msg_count - duplicate_message_count,error_msg_count,duplicate_message_count,false_msg_count);
@@ -199,7 +192,6 @@ int main(int argc, char *argv[])
         print_stats();
     }
 
-
     fclose(sample_file);
     if(message_file){
         fclose(message_file);
@@ -209,3 +201,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+

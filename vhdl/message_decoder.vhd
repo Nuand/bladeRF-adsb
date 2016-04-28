@@ -99,7 +99,7 @@ begin
         end if;
     end process;
 
-    --gate the input to the bsd calculator based on the som flag
+    -- Gate the input to the bsd calculator based on the som flag
     U_bsd_calculator : entity work.bsd_calculator
       port map(
         clock           =>  clock,

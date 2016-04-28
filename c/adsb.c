@@ -1,12 +1,9 @@
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include "adsb.h"
-
-
 
 //crc polynomial   24 23 22 21 20 19 18 17 16 15 14 13 10 3 1
 //[ 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 0 0 0 0 0 1 0 0 1]
@@ -41,7 +38,6 @@ uint32_t check_crc(uint8_t *msg, uint32_t length){
   }
   return crc &0xffffff;
 }
-
 
 const uint8_t WEIGHTS[SPS] = { 1, 1 ,2, 2, 2, 2, 1, 1 } ;
 
@@ -139,11 +135,9 @@ double bb_h_filt[] = {
   -0.000216247569686
 };
 
-
 struct adsb_state
 {
     cfilt16_t rx_filt;
-
 
     uint32_t low_if;
     uint32_t bb_filt;
@@ -165,14 +159,9 @@ struct adsb_state
     message_t *pending_message_buffers[16];
     uint32_t num_pending_message_buffers;
 
-
 } current_state;
 
-
-
-
 extern uint8_t known_msg[];
-
 
 void init( uint8_t enable_filter, uint8_t enable_mix)
 {
@@ -195,7 +184,6 @@ void init( uint8_t enable_filter, uint8_t enable_mix)
         current_state.active_message_buffers[i] = NULL;
     }
 
-
     current_state.num_pending_message_buffers = 16;
     for (i = 0; i < current_state.num_pending_message_buffers; i++){
         current_state.pending_message_buffers[i] = NULL;
@@ -212,7 +200,6 @@ void init( uint8_t enable_filter, uint8_t enable_mix)
       current_state.rx_filt.taps[i].imag  = (int16_t)(bb_h_filt[i] * (1 << current_state.rx_filt.q_scale));
     }
     memset(current_state.rx_filt.delay_line,0, sizeof(c16_t) * current_state.rx_filt.num_taps);
-
 
     init_crc_lut();
 }
@@ -231,8 +218,6 @@ uint32_t i,j,k,l;
 
   int16_t weak_count = 1;//always start witht he weakest sd
 
-
-  //
   uint32_t cur_min = abs(bsd[0]);
   weak_val[0] = cur_min;
   weak_loc[0] = 0;
@@ -278,7 +263,6 @@ uint32_t i,j,k,l;
     }
   }
 
-
   //at this point we have the 5 weakest sd and their location
   //attempt the various flipped permutations to see if the crc passes
   for(i = 0; i < 2; i++)
@@ -305,7 +289,6 @@ uint32_t i,j,k,l;
             return 1;
           }
 
-
           flipbit(msg_bits,weak_loc[3]);
         }
         flipbit(msg_bits,weak_loc[2]);
@@ -316,11 +299,8 @@ uint32_t i,j,k,l;
     flipbit(msg_bits,weak_loc[0]);
   }
 
-
   return 0;
 }
-
-
 
 message_t* rx(c16_t *in_sample)
 {
@@ -335,7 +315,6 @@ message_t* rx(c16_t *in_sample)
     else{
         samp_bb = *in_sample;
     }
-
 
     c16_t samp_filt;
     if(current_state.bb_filt){
@@ -386,7 +365,6 @@ message_t* rx(c16_t *in_sample)
         uint32_t subsequent_sample =current_state.rcd_buffer[EDGE_DETECTION_INDEX+1];
         uint32_t subsequent_ratio = center_sample/(subsequent_sample+1);
 
-
 /*        if( ( prior_ratio >= 1 ) &&
             ( subsequent_ratio < 1)) {
             current_state.leading_edges[EDGE_DETECTION_INDEX] = 1;
@@ -427,7 +405,6 @@ message_t* rx(c16_t *in_sample)
     }
 #endif
 
-
     //preamble detection
         //preamble is 8us long with 4 active PPM periods from:
         // 0.0:0.5 usec, samples 0:1*SPS-1
@@ -443,7 +420,6 @@ message_t* rx(c16_t *in_sample)
     uint32_t i2_sum = 0;
     uint32_t i3_sum = 0;
 
-
     uint32_t max_b0 = 0;
     uint32_t max_b1 = 0;
     uint32_t max_b2 = 0;
@@ -454,7 +430,6 @@ message_t* rx(c16_t *in_sample)
         i1_sum += current_state.rcd_buffer[2*SPS + i];
         i2_sum += current_state.rcd_buffer[7*SPS + i];
         i3_sum += current_state.rcd_buffer[9*SPS + i];
-
 
         //determine a reference power level for the 4 asserted preamble bits
       //do this while looping over the samples for the preamble detection
@@ -498,7 +473,6 @@ message_t* rx(c16_t *in_sample)
     uint32_t rpl = max_b0 + max_b1 + max_b2 + max_b3;
     rpl >>= 2;
 
-
     //allocate enough memory for a new message
     // DF       - 5 bits
     // CA       - 3 bits
@@ -521,7 +495,6 @@ message_t* rx(c16_t *in_sample)
       means[2] = i2_sum >> 2;
       means[3] = i3_sum >> 2;
 
-
       uint32_t cpl_high = rpl + ((rpl>>1) + (rpl>>2)  );
       uint32_t cpl_low = rpl - ((rpl>>1) + (rpl>>2) );
       uint32_t cpl_lowlow = cpl_low >> 1 ;
@@ -542,11 +515,9 @@ message_t* rx(c16_t *in_sample)
       }
       //end consistent power test
 
-
       //todo:implement DF validation
 
       //end DF validation
-
 
       uint32_t slice[EXTENDED_MESSAGE_LENGTH*SPS*2];
       memcpy( slice,
@@ -558,7 +529,6 @@ message_t* rx(c16_t *in_sample)
         printf("[%d] = %d\n",i, current_state.rcd_buffer[i]);
       }*/
 
-
       uint8_t *bits_e = malloc(EXTENDED_MESSAGE_LENGTH * sizeof(uint8_t));
       uint8_t *msg = malloc(EXTENDED_MESSAGE_LENGTH/8 * sizeof(uint8_t));
       int32_t bsd[EXTENDED_MESSAGE_LENGTH];
@@ -566,7 +536,6 @@ message_t* rx(c16_t *in_sample)
       int16_t typeA[2*SPS];
       int16_t typeB[2*SPS];
       //printf("populated slice! high %d low %d  count %d means %d %d %d %d\n",cpl_high,cpl_low,cpl_count, means[0],means[1],means[2],means[3]);
-
 
       for(i = 0; i < EXTENDED_MESSAGE_LENGTH*2; i += 2){
           uint32_t j;
@@ -658,7 +627,6 @@ message_t* rx(c16_t *in_sample)
 
       }
 
-
       for(i = 0; i < EXTENDED_MESSAGE_LENGTH; i+=8){
 
         msg[ i/8 ] =  (bits_e[i + 0] << 7)
@@ -683,12 +651,10 @@ message_t* rx(c16_t *in_sample)
       rx_crc_s = (msg[4] << 16) | (msg[5] << 8) | msg[6];
       rx_crc_e = (msg[11] << 16) | (msg[12] << 8) | msg[13];
 
-
       //if both crc's fail try the various permutations of the weakest sd bits
       if( !(extended_crc ^ rx_crc_e) && (rx_crc_e != 0)){
         //printf("CRC PASSED! %"PRIu64  " 0x%x\n", current_state.samples_consumed,rx_crc_e);
         current_state.messages_rxd++;
-
 
         completed_message = (message_t *)malloc(sizeof(message_t));
         completed_message->data = msg;
@@ -700,7 +666,6 @@ message_t* rx(c16_t *in_sample)
       }
       else if( !(short_crc ^ rx_crc_s) && (rx_crc_s != 0) ){
                 current_state.messages_rxd++;
-
 
         completed_message = (message_t *)malloc(sizeof(message_t));
         completed_message->data = msg;
@@ -753,10 +718,8 @@ message_t* rx(c16_t *in_sample)
       free(bits_e);
     }
 
-
     return completed_message;
 }
-
 
 void print_stats(){
   printf("samples processed:  %"PRIu64  "\n", current_state.samples_consumed);
@@ -765,5 +728,4 @@ void print_stats(){
   printf("messages decoded:   %6d\n", current_state.messages_rxd);
   printf("messages brute force decoded:   %6d\n", current_state.brute_forced_count);
 }
-
 

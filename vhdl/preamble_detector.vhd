@@ -10,60 +10,60 @@ entity preamble_detector is
     NUM_MESSAGE_DECODER : integer := 1
   );
   port(
-    clock       :   in  std_logic;
-    reset       :   in  std_logic;
+    clock           :   in  std_logic;
+    reset           :   in  std_logic;
 
-    power_in    :   in  signed(INPUT_POWER_WIDTH-1 downto 0);
-    edge_in     :   in  std_logic;
-    in_valid    :   in  std_logic;
+    power_in        :   in  signed(INPUT_POWER_WIDTH-1 downto 0);
+    edge_in         :   in  std_logic;
+    in_valid        :   in  std_logic;
 
     decoder_busy    :   in  std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
 
-    power_out   :   out signed(INPUT_POWER_WIDTH-1 downto 0);
-    out_valid   :   out std_logic;
-    som         :   out std_logic_vector( NUM_MESSAGE_DECODER-1 downto 0);
-    rpl         :   out signed(INPUT_POWER_WIDTH-1 downto 0)
+    power_out       :   out signed(INPUT_POWER_WIDTH-1 downto 0);
+    out_valid       :   out std_logic;
+    som             :   out std_logic_vector( NUM_MESSAGE_DECODER-1 downto 0);
+    rpl             :   out signed(INPUT_POWER_WIDTH-1 downto 0)
   );
 end entity;
 
 
 architecture arch of preamble_detector is
 
-    constant RPL_DOUBLECHECK : integer := 3;
-    constant SPS : integer := 8;
-    constant SPB : integer := 2;
-    constant PREAMBLE_LENGTH : integer := 8; -- preamble bits
+    constant RPL_DOUBLECHECK        : integer := 3;
+    constant SPS                    : integer := 8;
+    constant SPB                    : integer := 2;
+    constant PREAMBLE_LENGTH        : integer := 8; -- preamble bits
     constant PREAMBLE_BUFFER_LENGTH : integer := SPS*SPB*PREAMBLE_LENGTH; -- 8 * 2 * 8 = 128 samples
 
     --preambles are detected after the 5usec completes the 4th bit, this leaves 3usec to downcount
      -- 48 samples from the end of the last asserted bit in the preamble
-    constant MESSAGE_DELAY : integer := 48;
+    constant MESSAGE_DELAY          : integer := 48;
 
-    constant POWER_THRESHOLD : signed(INPUT_POWER_WIDTH-1 downto 0) := to_signed(integer(5000),INPUT_POWER_WIDTH);
-    constant SAMPLE_WINDOW : integer := 5;
+    constant POWER_THRESHOLD        : signed(INPUT_POWER_WIDTH-1 downto 0) := to_signed(integer(5000),INPUT_POWER_WIDTH);
+    constant SAMPLE_WINDOW          : integer := 5;
 
-    constant sum0_in : integer := SAMPLE_WINDOW-1;
-    constant sum1_in : integer := 2*SPS + SAMPLE_WINDOW-1;
-    constant sum2_in : integer := 7*SPS + SAMPLE_WINDOW-1;
-    constant sum3_in : integer := 9*SPS + SAMPLE_WINDOW-1;
+    constant sum0_in                : integer := SAMPLE_WINDOW-1;
+    constant sum1_in                : integer := 2*SPS + SAMPLE_WINDOW-1;
+    constant sum2_in                : integer := 7*SPS + SAMPLE_WINDOW-1;
+    constant sum3_in                : integer := 9*SPS + SAMPLE_WINDOW-1;
 
-    constant sum0_out : integer := 0;
-    constant sum1_out : integer := 2*SPS;
-    constant sum2_out : integer := 7*SPS;
-    constant sum3_out : integer := 9*SPS;
+    constant sum0_out               : integer := 0;
+    constant sum1_out               : integer := 2*SPS;
+    constant sum2_out               : integer := 7*SPS;
+    constant sum3_out               : integer := 9*SPS;
 
-    constant OUTPUT_TAP : integer := sum3_in;
+    constant OUTPUT_TAP             : integer := sum3_in;
 
-    signal edge_qualifier : std_logic_vector(3 downto 0);
-    signal edge_register : std_logic_vector(3 downto 0);
+    signal edge_qualifier           : std_logic_vector(3 downto 0);
+    signal edge_register            : std_logic_vector(3 downto 0);
 
     type power_array is array(natural range <>) of signed(INPUT_POWER_WIDTH-1 downto 0);
-    signal power_grid : power_array (PREAMBLE_BUFFER_LENGTH-1 downto 0);
-    signal edge_grid : std_logic_vector(PREAMBLE_BUFFER_LENGTH-1 downto 0);
+    signal power_grid               : power_array (PREAMBLE_BUFFER_LENGTH-1 downto 0);
+    signal edge_grid                : std_logic_vector(PREAMBLE_BUFFER_LENGTH-1 downto 0);
 
-    signal register_valid : std_logic;
-    signal preamble_detected : std_logic;
-    signal register_rpl : signed(INPUT_POWER_WIDTH-1 downto 0);
+    signal register_valid           : std_logic;
+    signal preamble_detected        : std_logic;
+    signal register_rpl             : signed(INPUT_POWER_WIDTH-1 downto 0);
 
     function locate_max_power( x : power_array(4 downto 0) ) return signed is
         variable current_max : signed(INPUT_POWER_WIDTH-1 downto 0) := (others => '0');
@@ -76,9 +76,8 @@ architecture arch of preamble_detector is
         return current_max;
     end function;
 
-    signal rpl_countdown : integer range 0 to 3;
-
-    signal som_pending : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
+    signal rpl_countdown            : integer range 0 to 3;
+    signal som_pending              : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
 
 begin
 
@@ -87,32 +86,25 @@ begin
         variable sum1 : signed(INPUT_POWER_WIDTH-1 downto 0);
         variable sum2 : signed(INPUT_POWER_WIDTH-1 downto 0);
         variable sum3 : signed(INPUT_POWER_WIDTH-1 downto 0);
-
         variable max : power_array( 3 downto 0);
         variable max_alt : power_array( 3 downto 0);
     begin
         if( reset = '1' ) then
-            --
             preamble_detected <= '0';
             register_valid <= '0';
-
             sum0 := (others => '0');
             sum1 := (others => '0');
             sum2 := (others => '0');
             sum3 := (others => '0');
-
             power_grid <= (others => (others => '0'));
             edge_grid <= (others => '0');
         elsif (rising_edge(clock))then
             edge_register <= (others => '0');
-
             if(register_valid = '1') then
-                --
                 if( (sum0 > POWER_THRESHOLD) and
                     (sum1 > POWER_THRESHOLD) and
                     (sum2 > POWER_THRESHOLD) and
                     (sum3 > POWER_THRESHOLD)) then
-                --
                     case ( to_integer( unsigned(edge_qualifier))) is
                         when 3 | 5 | 9 | 6 | 10 | 12 | 7 | 11 | 14 | 15 =>
                             preamble_detected <= '1';
@@ -166,12 +158,12 @@ begin
     end process ;
 
     clock_out : process(clock, reset)
-        variable current_rpl : signed(INPUT_POWER_WIDTH-1 downto 0);
-        variable pending_downcount : integer range 0 to MESSAGE_DELAY;
-        variable message_active : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
-        variable current_decoder_index : integer range 0 to NUM_MESSAGE_DECODER-1;
-        variable ignored : integer ;
-        variable coulda : integer ;
+        variable current_rpl            : signed(INPUT_POWER_WIDTH-1 downto 0);
+        variable pending_downcount      : integer range 0 to MESSAGE_DELAY;
+        variable message_active         : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
+        variable current_decoder_index  : integer range 0 to NUM_MESSAGE_DECODER-1;
+        variable ignored                : integer ;
+        variable coulda                 : integer ;
     begin
         if( reset = '1') then
             som <= (others => '0');
