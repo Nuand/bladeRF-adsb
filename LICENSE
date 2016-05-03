@@ -9,14 +9,15 @@ Use of the Software defined as FPGA firmware and C source code,
 in source and binary forms, with or without modification, are
 permitted provided that the following conditions are met:
 
-1. Source code may not be modified, or distributed to function on devices not
+1. Source code and any derivative works including binaries may only be used,
+integrated, copied, modified, and distributed when used on or tagetting devices
 sold, or distributed by Nuand LLC.
 
-2. Evaluation of software may not be deployed on more than 5 devices or
-last for longer than 30 working days from the time of first use of the Software.
+2. Evaluation of Software for commercial purposes is not permitted without prior
+consent from Nuand LLC (contact bladeRF@nuand.com).
 
 3. A commercial license or permission to use the Software for commercial
-purposes may be obtained only from Nuand LLC.
+purposes may be obtained only from Nuand LLC (contact bladeRF@nuand.com).
 
 4. Redistributions of source code must retain the above copyright
 notice, this list of conditions and the capitalized paragraph below.
