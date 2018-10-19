@@ -4,7 +4,7 @@ set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/b
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/message_decoder.vhd]] -hdl_version VHDL_2008
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/bit_flipper.vhd]] -hdl_version VHDL_2008
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/preamble_detector.vhd]] -hdl_version VHDL_2008
-set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/edge_detector.vhd]] -hdl_version VHDL_2008
+set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/adsb_edge_detector.vhd]] -hdl_version VHDL_2008
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/adsb_decoder_p.vhd]] -hdl_version VHDL_2008
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/adsb_decoder.vhd]] -hdl_version VHDL_2008
 set_global_assignment -name VHDL_FILE [file normalize [file join $here ../vhdl/adsb_crc.vhd]] -hdl_version VHDL_2008

@@ -4,7 +4,7 @@ vlib $work
 
 vcom -work $work -2008 ../vhdl/adsb_decoder_p.vhd
 
-vcom -work $work -2008 ../vhdl/edge_detector.vhd
+vcom -work $work -2008 ../vhdl/adsb_edge_detector.vhd
 vcom -work $work -2008 ../vhdl/preamble_detector.vhd
 vcom -work $work -2008 ../vhdl/smallest_bsds.vhd
 

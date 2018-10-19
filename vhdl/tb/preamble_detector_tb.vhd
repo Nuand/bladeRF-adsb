@@ -47,7 +47,7 @@ begin
 
     end process;
 
-    U_edge_detector : entity work.preamble_detector(arch)
+    U_adsb_edge_detector : entity work.preamble_detector(arch)
       port map {
         clock       => clock,
         reset       => reset,

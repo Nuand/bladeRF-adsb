@@ -2,10 +2,10 @@ library ieee;
     use ieee.numeric_std.all;
     use ieee.std_logic_1164.all;
 
-entity edge_detector_tb is
+entity adsb_edge_detector_tb is
 end entity;
 
-architecture arch of edge_detector_tb is
+architecture arch of adsb_edge_detector_tb is
 
     signal reset : std_logic := '1';
     signal clock : std_logic := '1';
@@ -54,7 +54,7 @@ begin
 
     end process;
 
-    U_edge_detector : entity work.edge_detector(arch)
+    U_adsb_edge_detector : entity work.adsb_edge_detector(arch)
       port map  (
         clock       => clock,
         reset       => reset,

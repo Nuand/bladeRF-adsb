@@ -44,7 +44,7 @@ architecture arch of adsb_decoder is
 
 begin
 
-    U_edge_detector : entity work.edge_detector
+    U_adsb_edge_detector : entity work.adsb_edge_detector
       port map (
         clock       =>  clock,
         reset       =>  reset,

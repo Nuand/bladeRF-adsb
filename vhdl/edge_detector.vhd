@@ -5,7 +5,7 @@ library ieee;
 library work ;
     use work.adsb_decoder_p.all ;
 
-entity edge_detector is
+entity adsb_edge_detector is
   port (
     clock       : in std_logic;
     reset       : in std_logic;
@@ -21,7 +21,7 @@ entity edge_detector is
   );
 end entity;
 
-architecture arch of edge_detector is
+architecture arch of adsb_edge_detector is
 
     constant SPS                : integer := 8;
     constant EDGE_BUFFER_LENGTH : integer := SPS + 1;
