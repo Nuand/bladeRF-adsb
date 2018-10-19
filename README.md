@@ -51,10 +51,10 @@ This will compile and run the user-mode utility that interfaces with the VHDL de
 The ADS-B decoder is a core that substantially modifies the operation of the bladeRF FPGA. The core has its own FPGA revision called "adsb" separate from the normal "hosted" image. To compile the core, fetch a recent snapshot of the existing bladeRF repository. Afterwards, clone this repository in to hdl/fpga/ip/nuand.
 
 ````
-$ git clone http://github/Nuand/bladeRF.git
+$ git clone http://github.com/Nuand/bladeRF.git
 $ cd bladeRF
 $ cd hdl/fpga/ip/nuand
-$ git clone http://github/Nuand/bladeRF-adsb.git adsb
+$ git clone http://github.com/Nuand/bladeRF-adsb.git adsb
 ````
 
 Once the repository is setup, use the standard [FPGA build directions](https://github.com/Nuand/bladeRF/tree/master/hdl) to build the ADS-B decoder image.
