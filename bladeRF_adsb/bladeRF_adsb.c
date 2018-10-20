@@ -17,6 +17,8 @@
 
 #define FPGA_FNAME_115 "./adsbx115.rbf"
 #define FPGA_FNAME_40 "./adsbx40.rbf"
+#define FPGA_FNAME_A4 "./adsbxA4.rbf"
+#define FPGA_FNAME_A9 "./adsbxA9.rbf"
 
 bool dump_messages = true ;
 
@@ -217,6 +219,10 @@ int main(int argc, char *argv[]) {
         status = bladerf_load_fpga(dev, FPGA_FNAME_40) ;
     else if ( fpga_size == BLADERF_FPGA_115KLE ) 
         status = bladerf_load_fpga(dev, FPGA_FNAME_115) ;
+    else if ( fpga_size == BLADERF_FPGA_A4 )
+        status = bladerf_load_fpga(dev, FPGA_FNAME_A4) ;
+    else if ( fpga_size == BLADERF_FPGA_A9 )
+        status = bladerf_load_fpga(dev, FPGA_FNAME_A9) ;
     else {
         fprintf( stderr, "Incompatible FPGA size.\n") ;
         goto close ;
