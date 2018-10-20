@@ -15,9 +15,6 @@
 
 #include <libbladeRF.h>
 
-#define FPGA_FNAME_115 "./adsbx115.rbf"
-#define FPGA_FNAME_40 "./adsbx40.rbf"
-
 bool dump_messages = true ;
 
 int config_socket() {
@@ -133,6 +130,22 @@ int configure_module(struct bladerf *dev, struct module_config *c)
 }
 
 int main(int argc, char *argv[]) {
+
+    char FPGA_FNAME_115[1024];
+    char FPGA_FNAME_40[1024];
+
+    if(argc > 1) {
+        printf("1 True");
+        strcpy(FPGA_FNAME_115, argv[1]);
+        strcpy(FPGA_FNAME_40, argv[1]);
+    }else {
+        strcpy(FPGA_FNAME_115, "./");
+        strcpy(FPGA_FNAME_40, "./");
+    }
+
+    strcat(FPGA_FNAME_115, "adsbx115.rbf");
+    strcat(FPGA_FNAME_40, "adsbx40.rbf");
+
     int sockfd = -1 ;
     int status ;
     struct bladerf *dev = NULL ;
