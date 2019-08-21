@@ -51,6 +51,7 @@ int config_socket() {
 
 /* The RX and TX modules are configured independently for these parameters */
 struct module_config {
+    int unified_gain;
     bladerf_module module;
     unsigned int frequency;
     unsigned int bandwidth;
@@ -92,6 +93,21 @@ int configure_module(struct bladerf *dev, struct module_config *c)
     switch (c->module) {
         case BLADERF_MODULE_RX:
             /* Configure the gains of the RX LNA, RX VGA1, and RX VGA2  */
+            if (c->unified_gain) {
+                status = bladerf_set_gain_mode(dev, BLADERF_CHANNEL_RX(0), BLADERF_GAIN_MGC);
+                if (status != 0) {
+                    fprintf(stderr, "Failed to set gain mode to manual: %s\n",
+                            bladerf_strerror(status));
+                    return status;
+                }
+                status = bladerf_set_gain(dev, BLADERF_CHANNEL_RX(0), c->unified_gain);
+                if (status != 0) {
+                    fprintf(stderr, "Failed to set gain: %s\n",
+                            bladerf_strerror(status));
+                    return status;
+                }
+                return status;
+            }
             status = bladerf_set_lna_gain(dev, c->rx_lna);
             if (status != 0) {
                 fprintf(stderr, "Failed to set RX LNA gain: %s\n",
@@ -142,16 +158,6 @@ int main(int argc, char *argv[]) {
     char ascii_buf[1024] ;
     bladerf_fpga_size fpga_size ;
 
-    struct module_config tx_config = {
-        .module = BLADERF_MODULE_TX,
-        .frequency  = 300000000,
-        .bandwidth  = 1500000,
-        .samplerate = 80000,
-        .rx_lna     = BLADERF_LNA_GAIN_MAX,
-        .vga1       = -14,
-        .vga2       = 0
-    } ;
-
     struct module_config rx_config = {
         .module     = BLADERF_MODULE_RX,
         .frequency  = 1086000000,
@@ -159,7 +165,8 @@ int main(int argc, char *argv[]) {
         .samplerate = 16000000,
         .rx_lna     = BLADERF_LNA_GAIN_MAX,
         .vga1       = 10,
-        .vga2       = 6
+        .vga2       = 6,
+        .unified_gain = 0
     } ;
 
     if ( argc >= 2 ) {
@@ -169,6 +176,10 @@ int main(int argc, char *argv[]) {
             rx_config.rx_lna = BLADERF_LNA_GAIN_MID ;
         else if ( !strcmp(argv[1], "max") )
             rx_config.rx_lna = BLADERF_LNA_GAIN_MAX ;
+        else if ( !strcmp(argv[1], "unified") ) {
+            rx_config.unified_gain = 35;
+            goto bypass_lna;
+        }
 
         fprintf( stderr, "Set LNA to %s\n",
                (rx_config.rx_lna == BLADERF_LNA_GAIN_BYPASS) ? "Min" :
@@ -186,6 +197,8 @@ int main(int argc, char *argv[]) {
         fprintf( stderr, "Set RXGA2 to %d\n", rx_config.vga2 ) ;
     }
 
+bypass_lna:
+
     sockfd = config_socket();
     if ( sockfd == -1 ) {
         fprintf( stderr, "Could not connect to local dump1090 server\n");
@@ -201,7 +214,7 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &action, NULL) ;
 
     /* Open the device */
-    status = bladerf_open(&dev, "*") ;
+    status = bladerf_open(&dev, NULL) ;
     if ( status < 0) {
         fprintf( stderr, "Couldn't open device: %s\n", bladerf_strerror(status)) ;
         goto out ;
@@ -224,19 +237,23 @@ int main(int argc, char *argv[]) {
     else if ( fpga_size == BLADERF_FPGA_A9 )
         status = bladerf_load_fpga(dev, FPGA_FNAME_A9) ;
     else {
-        fprintf( stderr, "Incompatible FPGA size.\n") ;
-        goto close ;
+        status = bladerf_load_fpga(dev, FPGA_FNAME_A4) ;
     }
+
+    if (fpga_size == BLADERF_FPGA_A4 || fpga_size == BLADERF_FPGA_A9) {
+        rx_config.unified_gain = 35;
+    }
+
     if (status < 0 ) {
         fprintf( stderr, "Couldn't load FPGA: %s\n", bladerf_strerror(status) ) ;
         goto close ;
     }
 
-    /* Configure TX */
-    status = configure_module(dev, &tx_config) ;
-    if ( status < 0 ) {
-        fprintf( stderr, "Couldn't configure TX module: %s\n", bladerf_strerror(status) ) ;
-        goto close ;
+    bladerf_close(dev);
+    status = bladerf_open(&dev, NULL) ;
+    if ( status < 0) {
+        fprintf( stderr, "Couldn't open device: %s\n", bladerf_strerror(status)) ;
+        goto out ;
     }
 
     /* Configure RX */
