@@ -150,6 +150,13 @@ int configure_module(struct bladerf *dev, struct module_config *c)
     return status;
 }
 
+#ifndef LIBBLADERF_API_VERSION
+#error LIBBLADERF_API_VERSION is not defined in headers. At minimum libbladeRF version 2.0.0 is required.
+#endif
+#if ( LIBBLADERF_API_VERSION < 0x2000000 )
+#error Incompatible libbladeRF header version. At minimum libbladeRF version 2.0.0 is required.
+#endif
+
 int main(int argc, char *argv[]) {
     int sockfd = -1 ;
     int status ;
