@@ -60,12 +60,18 @@ $ git clone http://github.com/Nuand/bladeRF-adsb.git adsb
 Once the repository is setup, use the standard [FPGA build directions](https://github.com/Nuand/bladeRF/tree/master/hdl) to build the ADS-B decoder image.
 
 ````
-$ ./build_bladeRF.sh -r adsb -s 40
+$ ./build_bladerf.sh -r adsb -b bladeRF -s 40
 ````
 
 And if building for an x115,
 
 ````
-$ ./build_bladeRF.sh -r adsb -s 115 
+$ ./build_bladerf.sh -r adsb -b bladeRF -s 115
 ````
 
+And for the bladeRF 2.0 micro,
+````
+$ ./build_bladerf.sh -r adsb -b bladeRF-micro -s A4
+$ ./build_bladerf.sh -r adsb -b bladeRF-micro -s A5
+$ ./build_bladerf.sh -r adsb -b bladeRF-micro -s A9
+````
