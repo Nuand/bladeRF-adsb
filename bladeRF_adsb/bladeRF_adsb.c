@@ -18,6 +18,7 @@
 #define FPGA_FNAME_115 "./adsbx115.rbf"
 #define FPGA_FNAME_40 "./adsbx40.rbf"
 #define FPGA_FNAME_A4 "./adsbxA4.rbf"
+#define FPGA_FNAME_A5 "./adsbxA5.rbf"
 #define FPGA_FNAME_A9 "./adsbxA9.rbf"
 
 bool dump_messages = true ;
@@ -241,13 +242,15 @@ bypass_lna:
         status = bladerf_load_fpga(dev, FPGA_FNAME_115) ;
     else if ( fpga_size == BLADERF_FPGA_A4 )
         status = bladerf_load_fpga(dev, FPGA_FNAME_A4) ;
+    else if ( fpga_size == BLADERF_FPGA_A5 )
+        status = bladerf_load_fpga(dev, FPGA_FNAME_A5) ;
     else if ( fpga_size == BLADERF_FPGA_A9 )
         status = bladerf_load_fpga(dev, FPGA_FNAME_A9) ;
     else {
         status = bladerf_load_fpga(dev, FPGA_FNAME_A4) ;
     }
 
-    if (fpga_size == BLADERF_FPGA_A4 || fpga_size == BLADERF_FPGA_A9) {
+    if (fpga_size == BLADERF_FPGA_A4 || fpga_size == BLADERF_FPGA_A5 || fpga_size == BLADERF_FPGA_A9) {
         rx_config.unified_gain = 35;
     }
 
