@@ -65,16 +65,30 @@ architecture arch of preamble_detector is
     signal preamble_detected        : std_logic;
     signal register_rpl             : signed(INPUT_POWER_WIDTH-1 downto 0);
 
-    function locate_max_power( x : power_array(4 downto 0) ) return signed is
+    function positive_max(a, b : signed) return signed is
         variable current_max : signed(INPUT_POWER_WIDTH-1 downto 0) := (others => '0');
     begin
-        for i in 0 to 4 loop
-            if(x(i) > current_max) then
-                current_max := x(i);
-            end if;
-        end loop;
+        if a > current_max then
+            current_max := a;
+        end if;
+        if b > current_max then
+            current_max := b;
+        end if;
         return current_max;
     end function;
+
+    function greater_power(a, b : signed) return signed is
+    begin
+        if b > a then
+            return b;
+        end if;
+        return a;
+    end function;
+
+    type tap_array is array (0 to 3) of natural;
+    constant WINDOW_TAPS : tap_array := (sum0_out, sum1_out, sum2_out, sum3_out);
+    type window_max_array is array (0 to 3) of power_array(2 downto 0);
+    signal window_max : window_max_array;
 
     signal rpl_countdown            : integer range 0 to 3;
     signal som_pending              : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
@@ -98,6 +112,7 @@ begin
             sum3 := (others => '0');
             power_grid <= (others => (others => '0'));
             edge_grid <= (others => '0');
+            window_max <= (others => (others => (others => '0')));
         elsif (rising_edge(clock))then
             edge_register <= (others => '0');
             if(register_valid = '1') then
@@ -134,11 +149,25 @@ begin
                 edge_qualifier(2) <= edge_grid(sum2_out);
                 edge_qualifier(3) <= edge_grid(sum3_out);
 
-                --find max in each bin
-                max(0) := locate_max_power(power_grid(sum0_in downto sum0_out));
-                max(1) := locate_max_power(power_grid(sum1_in downto sum1_out));
-                max(2) := locate_max_power(power_grid(sum2_in downto sum2_out));
-                max(3) := locate_max_power(power_grid(sum3_in downto sum3_out));
+                -- The grid advances only with in_valid. Prepare partial maxima
+                -- for its next contents using the next-higher taps, then finish
+                -- the current window from the previous partials. This divides
+                -- the comparator chain without adding a sample or output delay,
+                -- including when valid samples are separated by idle clocks.
+                for i in WINDOW_TAPS'range loop
+                    max(i) := greater_power(
+                        greater_power(window_max(i)(0), window_max(i)(1)),
+                        window_max(i)(2));
+                    window_max(i)(0) <= positive_max(
+                        power_grid(WINDOW_TAPS(i) + 1),
+                        power_grid(WINDOW_TAPS(i) + 2));
+                    window_max(i)(1) <= positive_max(
+                        power_grid(WINDOW_TAPS(i) + 3),
+                        power_grid(WINDOW_TAPS(i) + 4));
+                    window_max(i)(2) <= positive_max(
+                        power_grid(WINDOW_TAPS(i) + 5),
+                        to_signed(0, INPUT_POWER_WIDTH));
+                end loop;
             end if;
 
             register_valid <= in_valid;
