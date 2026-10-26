@@ -94,6 +94,12 @@ architecture arch of preamble_detector is
     signal window_pairs : window_pairs_array;
     signal window_merge : window_merge_array;
 
+    -- Keep the valid-sample pipeline boundaries: moving enable muxes through
+    -- the comparison stages recreates the long paths this pipeline removes.
+    attribute dont_retime : boolean;
+    attribute dont_retime of window_samples, window_pairs, window_merge,
+                             register_rpl, register_valid : signal is true;
+
     signal rpl_countdown            : integer range 0 to 3;
     signal som_pending              : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
 
