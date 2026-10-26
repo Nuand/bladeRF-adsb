@@ -51,6 +51,7 @@ architecture arch of bit_flipper is
     -- Given the iteration we are, calculate the bit flip mask to apply
     function calculate_flip_mask( iter : unsigned ; smallest : elements_t ) return std_logic_vector is
         variable rv : std_logic_vector(111 downto 0) := (others =>'0') ;
+        variable hit : std_logic_vector(4 downto 0);
     begin
         assert iter'length = 5
             report "Iteration length can only be 5 bits long"
@@ -60,11 +61,14 @@ architecture arch of bit_flipper is
             severity failure ;
         for i in rv'range loop
             for j in smallest'range loop
+                hit(j) := '0';
                 if( iter(j) = '1' and smallest(j).index = i ) then
-                    rv(i) := '1' ;
-                    exit ;
+                    hit(j) := '1';
                 end if ;
             end loop ;
+            -- Every matching rank sets the same output bit; no rank has
+            -- priority. Keep this as parallel comparisons and a balanced OR.
+            rv(i) := (hit(0) or hit(1)) or ((hit(2) or hit(3)) or hit(4));
         end loop ;
         return rv ;
     end function ;

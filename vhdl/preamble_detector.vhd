@@ -87,8 +87,12 @@ architecture arch of preamble_detector is
 
     type tap_array is array (0 to 3) of natural;
     constant WINDOW_TAPS : tap_array := (sum0_out, sum1_out, sum2_out, sum3_out);
-    type window_max_array is array (0 to 3) of power_array(2 downto 0);
-    signal window_max : window_max_array;
+    type window_samples_array is array (0 to 3) of power_array(4 downto 0);
+    type window_pairs_array is array (0 to 3) of power_array(2 downto 0);
+    type window_merge_array is array (0 to 3) of power_array(1 downto 0);
+    signal window_samples : window_samples_array;
+    signal window_pairs : window_pairs_array;
+    signal window_merge : window_merge_array;
 
     signal rpl_countdown            : integer range 0 to 3;
     signal som_pending              : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
@@ -112,7 +116,9 @@ begin
             sum3 := (others => '0');
             power_grid <= (others => (others => '0'));
             edge_grid <= (others => '0');
-            window_max <= (others => (others => (others => '0')));
+            window_samples <= (others => (others => (others => '0')));
+            window_pairs <= (others => (others => (others => '0')));
+            window_merge <= (others => (others => (others => '0')));
         elsif (rising_edge(clock))then
             edge_register <= (others => '0');
             if(register_valid = '1') then
@@ -149,24 +155,22 @@ begin
                 edge_qualifier(2) <= edge_grid(sum2_out);
                 edge_qualifier(3) <= edge_grid(sum3_out);
 
-                -- The grid advances only with in_valid. Prepare partial maxima
-                -- for its next contents using the next-higher taps, then finish
-                -- the current window from the previous partials. This divides
-                -- the comparator chain without adding a sample or output delay,
-                -- including when valid samples are separated by idle clocks.
+                -- Look three valid samples ahead in the grid, then perform one
+                -- comparison per stage. Each stage advances only with in_valid,
+                -- so the final maximum still describes the current window and
+                -- adds no output latency, including across idle clock cycles.
                 for i in WINDOW_TAPS'range loop
-                    max(i) := greater_power(
-                        greater_power(window_max(i)(0), window_max(i)(1)),
-                        window_max(i)(2));
-                    window_max(i)(0) <= positive_max(
-                        power_grid(WINDOW_TAPS(i) + 1),
-                        power_grid(WINDOW_TAPS(i) + 2));
-                    window_max(i)(1) <= positive_max(
-                        power_grid(WINDOW_TAPS(i) + 3),
-                        power_grid(WINDOW_TAPS(i) + 4));
-                    window_max(i)(2) <= positive_max(
-                        power_grid(WINDOW_TAPS(i) + 5),
-                        to_signed(0, INPUT_POWER_WIDTH));
+                    max(i) := greater_power(window_merge(i)(0), window_merge(i)(1));
+                    window_merge(i)(0) <= greater_power(window_pairs(i)(0), window_pairs(i)(1));
+                    window_merge(i)(1) <= window_pairs(i)(2);
+                    window_pairs(i)(0) <= greater_power(window_samples(i)(0), window_samples(i)(1));
+                    window_pairs(i)(1) <= greater_power(window_samples(i)(2), window_samples(i)(3));
+                    window_pairs(i)(2) <= window_samples(i)(4);
+                    for j in 0 to 4 loop
+                        window_samples(i)(j) <= positive_max(
+                            power_grid(WINDOW_TAPS(i) + j + 3),
+                            to_signed(0, INPUT_POWER_WIDTH));
+                    end loop;
                 end loop;
             end if;
 
@@ -193,6 +197,8 @@ begin
         variable current_decoder_index  : integer range 0 to NUM_MESSAGE_DECODER-1;
         variable ignored                : integer ;
         variable coulda                 : integer ;
+        variable larger_rpl             : boolean;
+        variable cleared_rpl            : boolean;
     begin
         if( reset = '1') then
             som <= (others => '0');
@@ -209,6 +215,11 @@ begin
             power_out <= power_grid(122);
             rpl <= current_rpl;
             if( register_valid = '1') then
+                -- Compare with the old value in parallel with countdown/clear
+                -- selection, rather than placing a clear mux before a second
+                -- wide comparison on the feedback path.
+                larger_rpl := register_rpl > current_rpl;
+                cleared_rpl := false;
 
                 --begin counting down the remainder of the preamble
                 if som_pending(current_decoder_index)  = '1' then
@@ -222,6 +233,7 @@ begin
                             som(current_decoder_index) <= '1';
                             som_pending(current_decoder_index) <= '0';
                             current_rpl := to_signed(0,current_rpl'length);
+                            cleared_rpl := true;
 
                             if (current_decoder_index = NUM_MESSAGE_DECODER-1) then
                                 current_decoder_index := 0;
@@ -232,6 +244,7 @@ begin
                             -- report "Current decoder busy - possible lost preamble" ;
                             som_pending(current_decoder_index) <= '0' ;
                             current_rpl := (others =>'0') ;
+                            cleared_rpl := true;
                             for i in decoder_busy'range loop
                                 if decoder_busy(i) = '0' then
                                     coulda := coulda + 1 ;
@@ -244,7 +257,8 @@ begin
                 end if;
 
                 if ( preamble_detected = '1') then
-                    if(register_rpl > current_rpl)  then
+                    if (cleared_rpl and register_rpl > to_signed(0, INPUT_POWER_WIDTH)) or
+                       (not cleared_rpl and larger_rpl) then
                         current_rpl := register_rpl;
                         pending_downcount := 3;
                         som_pending(current_decoder_index) <= '1';
