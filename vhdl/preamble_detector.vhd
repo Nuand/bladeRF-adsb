@@ -79,7 +79,7 @@ architecture arch of preamble_detector is
 
     function greater_power(a, b : signed) return signed is
     begin
-        if b > a then
+        if larger_power(b, a) then
             return b;
         end if;
         return a;
