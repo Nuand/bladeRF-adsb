@@ -51,6 +51,15 @@ architecture arch of smallest_bsds is
     signal ranks_ext    : elements_t(smallest_ext'range) ;
     signal ranks_short  : elements_t(smallest_short'range) ;
 
+    -- Keep ranking updates separate from the wide bit-mask decoder and allow
+    -- local copies of its index drivers near their destinations.
+    attribute preserve : boolean;
+    attribute dont_retime : boolean;
+    attribute maxfan : integer;
+    attribute preserve of ranks_ext, ranks_short : signal is true;
+    attribute dont_retime of ranks_ext, ranks_short : signal is true;
+    attribute maxfan of ranks_ext, ranks_short : signal is 16;
+
     signal idx : integer range 0 to 111 ;
 
 begin

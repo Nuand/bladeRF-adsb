@@ -44,6 +44,15 @@ architecture arch of bsd_calculator is
     signal typeA        : bsd_hit_t(0 to 2*SPS-1);
     signal typeB        : bsd_hit_t(0 to 2*SPS-1);
 
+    -- Preserve threshold/classification stages and distribute threshold
+    -- drivers locally instead of routing one copy across all sample slots.
+    attribute preserve : boolean;
+    attribute dont_retime : boolean;
+    attribute maxfan : integer;
+    attribute preserve of rpl_low, rpl_high, rpl_lowlow : signal is true;
+    attribute dont_retime of rpl_low, rpl_high, rpl_lowlow, typeA, typeB : signal is true;
+    attribute maxfan of rpl_low, rpl_high, rpl_lowlow : signal is 8;
+
     signal bsd_request  : std_logic;
     signal score_it     : std_logic;
 
