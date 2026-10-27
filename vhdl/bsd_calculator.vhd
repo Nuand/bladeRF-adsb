@@ -43,6 +43,9 @@ architecture arch of bsd_calculator is
     type bsd_hit_t is array(natural range <>) of signed(7 downto 0);
     signal typeA        : bsd_hit_t(0 to 2*SPS-1);
     signal typeB        : bsd_hit_t(0 to 2*SPS-1);
+    signal above_low    : bsd_hit_t(0 to 2*SPS-1);
+    signal below_high   : bsd_hit_t(0 to 2*SPS-1);
+    signal below_lowlow : bsd_hit_t(0 to 2*SPS-1);
 
     -- Preserve threshold/classification stages and distribute threshold
     -- drivers locally instead of routing one copy across all sample slots.
@@ -50,7 +53,8 @@ architecture arch of bsd_calculator is
     attribute dont_retime : boolean;
     attribute maxfan : integer;
     attribute preserve of rpl_low, rpl_high, rpl_lowlow : signal is true;
-    attribute dont_retime of rpl_low, rpl_high, rpl_lowlow, typeA, typeB : signal is true;
+    attribute dont_retime of rpl_low, rpl_high, rpl_lowlow, above_low,
+                             below_high, below_lowlow : signal is true;
     attribute maxfan of rpl_low, rpl_high, rpl_lowlow : signal is 8;
 
     signal bsd_request  : std_logic;
@@ -58,6 +62,15 @@ architecture arch of bsd_calculator is
 
 
 begin
+
+    -- Register independent comparisons before combining the classifications.
+    -- The stored flags describe the same sample slot on the same clock edge;
+    -- the scoring process still reads the previous, settled classifications.
+    -- Bitwise operations also preserve uninitialized slot values in simulation.
+    classification : for i in typeA'range generate
+        typeA(i) <= above_low(i) and below_high(i);
+        typeB(i) <= below_lowlow(i) and not typeA(i);
+    end generate;
 
     --this is the main loop responsible for scoring the samples
     calculate : process(clock,reset)
@@ -130,16 +143,12 @@ begin
             score_it <= power_in_valid;
 
             if(power_in_valid = '1') then
-                if (larger_power(power_in, rpl_low) and larger_power(rpl_high, power_in)) then
-                    typeA(sample_count) <= to_signed(1,8);
-                    typeB(sample_count) <=to_signed(0,8);
-                elsif (larger_power(rpl_lowlow, power_in)) then
-                    typeA(sample_count) <= to_signed(0,8);
-                    typeB(sample_count) <= to_signed(1,8);
-                else
-                    typeA(sample_count) <= to_signed(0,8);
-                    typeB(sample_count) <= to_signed(0,8);
-                end if;
+                above_low(sample_count) <= to_signed(0,8);
+                below_high(sample_count) <= to_signed(0,8);
+                below_lowlow(sample_count) <= to_signed(0,8);
+                if larger_power(power_in, rpl_low) then above_low(sample_count) <= to_signed(1,8); end if;
+                if larger_power(rpl_high, power_in) then below_high(sample_count) <= to_signed(1,8); end if;
+                if larger_power(rpl_lowlow, power_in) then below_lowlow(sample_count) <= to_signed(1,8); end if;
 
                 if(sample_count = 15) then
                     sample_count <= 0;

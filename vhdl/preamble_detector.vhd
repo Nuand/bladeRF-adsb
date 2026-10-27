@@ -198,7 +198,7 @@ begin
 
     clock_out : process(clock, reset)
         variable current_rpl            : signed(INPUT_POWER_WIDTH-1 downto 0);
-        variable pending_downcount      : integer range 0 to MESSAGE_DELAY;
+        variable pending_downcount      : integer range 0 to RPL_DOUBLECHECK;
         variable message_active         : std_logic_vector(NUM_MESSAGE_DECODER-1 downto 0);
         variable current_decoder_index  : integer range 0 to NUM_MESSAGE_DECODER-1;
         variable ignored                : integer ;
@@ -266,7 +266,7 @@ begin
                     if (cleared_rpl and register_rpl > to_signed(0, INPUT_POWER_WIDTH)) or
                        (not cleared_rpl and larger_rpl) then
                         current_rpl := register_rpl;
-                        pending_downcount := 3;
+                        pending_downcount := RPL_DOUBLECHECK;
                         som_pending(current_decoder_index) <= '1';
                     end if;
                 end if;
