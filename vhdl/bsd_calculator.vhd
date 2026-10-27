@@ -130,10 +130,10 @@ begin
             score_it <= power_in_valid;
 
             if(power_in_valid = '1') then
-                if ((power_in > rpl_low) and (power_in < rpl_high)) then
+                if (larger_power(power_in, rpl_low) and larger_power(rpl_high, power_in)) then
                     typeA(sample_count) <= to_signed(1,8);
                     typeB(sample_count) <=to_signed(0,8);
-                elsif (power_in < rpl_lowlow) then
+                elsif (larger_power(rpl_lowlow, power_in)) then
                     typeA(sample_count) <= to_signed(0,8);
                     typeB(sample_count) <= to_signed(1,8);
                 else
